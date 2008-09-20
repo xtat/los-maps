@@ -1,0 +1,3 @@
+http://www.pygtk.org/docs/pygtk/class-gtkbutton.html#method-gtkbutton--set-relief
+
+http://www.pygtk.org/pygtk2tutorial/ch-MenuWidget.html

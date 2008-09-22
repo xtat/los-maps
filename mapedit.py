@@ -14,24 +14,26 @@ class Image(object):
         return "%s.jpg"% (self.name)
 
 class Tile(object):
-    image = Image()
     special_function = 0
     special_param = ""
+    def __init__(self):
+        self.image = Image()
     def __str__(self):
         return "%s%s%s%s\n" % (pack("B", len(self.image.name)),
                                self.image.name,
                                pack("B", self.special_function),
                                self.special_param)
-    
+
 class Map(object):
     MAPWIDTH = 11
     MAPHEIGHT = 11
 
-    tiles = []
-    for x in range(0,11):
-        tiles.append(list())
-        for y in range(0,11):
-            tiles[x].append(Tile())
+    def __init__(self):
+        self.tiles = []
+        for x in range(0,11):
+            self.tiles.append(list())
+            for y in range(0,11):
+                self.tiles[x].append(Tile())
             
     map_type = 0
     song_name = "default"
@@ -76,16 +78,19 @@ class Map(object):
         self.spawn_name = mapstr[6].strip()
         self.enter_msg = mapstr[7].strip()
         idx = 8
-        for row in self.tiles:
-            for tile in row:
+        self.tiles = []
+        for x in range(0,11):
+            row = []
+            for y in range(0,11):
+                tile = Tile()
                 curstr = mapstr[idx].strip()
-                print curstr
                 imgnamelen = unpack("B", curstr[0])[0]
-                tile.name = curstr[1:imgnamelen+1]
+                tile.image.name = curstr[1:imgnamelen+1]
                 tile.special_function = unpack("B", curstr[imgnamelen+1])[0]
-                print tile.special_function
                 tile.special_param = curstr[imgnamelen+2:]
                 idx += 1
+                row.append(tile)
+            self.tiles.append(row)
     
 class MapEditor(object):        
     def __init__(self):
@@ -95,7 +100,7 @@ class MapEditor(object):
         # create the main window, and attach delete_event
         self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.window.connect("delete_event", self.close_application)
-        self.window.set_border_width(10)
+        #self.window.set_border_width(10)
         self.window.show()
         
         vbox = gtk.VBox()
@@ -103,14 +108,15 @@ class MapEditor(object):
         self.window.add(vbox)
         self.__build_menubar(vbox)
         
-        # Make 11 Rows of 11 buttons
-        buttongrid = []
+        # Make 11 Rows of 11 boxes
+        boxgrid = []
         hboxes = []
         rowcnt = 0
         for row in self.curmap.tiles:
-            # Make a an hbox, and a row of 11 buttons
-            buttons = []
+            # Make a an hbox, and a row of 11 boxes
+            boxes = []
             hbox = gtk.HBox()
+            
             hbox.show()
             vbox.add(hbox)
             columncnt = 0
@@ -118,49 +124,45 @@ class MapEditor(object):
                 image = gtk.Image()
                 image.set_from_file(tile.image.get_path())
                 image.show()
-                button = gtk.Button()
-                button.set_relief(gtk.RELIEF_NONE)
-                button.add(image)
-                buttons.append(button)
-                button.show()
-                hbox.pack_start(button)
-                button.connect("clicked", self.button_clicked,
+                box = gtk.EventBox()
+                box.add(image)
+                boxes.append(box)
+                box.show()
+                hbox.pack_start(box)
+                box.connect("button_press_event", self.box_clicked,
                                (rowcnt,columncnt))
                                
                 columncnt += 1
             hboxes.append(hbox)
             rowcnt += 1
-            buttongrid.append(buttons)
-        self.buttongrid = buttongrid
+            boxgrid.append(boxes)
+        self.boxgrid = boxgrid
         sep = gtk.VSeparator()
         sep.set_size_request(200, 20)
         vbox.add(sep)
         sep.show()
         
-        # make selected display button
+        # make selected display box
         i = gtk.Image()
         i.set_from_file(self.selected_tile.image.get_path())
         i.show()
-        b = gtk.Button()
-        b.set_relief(gtk.RELIEF_NONE)
+        b = gtk.EventBox()
         b.add(i)
-        self.selectedbutton = b
+        self.selectedbox = b
         vbox.add(b)
         b.show()
         
         self.__build_tileselector(vbox)
         
-    def __change_selected(self, widget, data=None):
-        for tile in self.tilebox:
-            print tile.image.name
+    def __change_selected(self, widget, event, data=None):
         print "change selected to: %s: %s" % (data,
                                               self.tilebox[data].image.name)
         self.selected_tile = self.tilebox[data]
-        i = gtk.Image()
-        i.set_from_file(self.selected_tile.image.get_path())
-        i.show()
-        self.selectedbutton.set_image(i)
-        self.selectedbutton.show()
+
+        for child in self.selectedbox.get_children():
+            child.set_from_file(self.selected_tile.image.get_path())
+        
+        self.selectedbox.show()
         
         
     # when invoked (via signal delete_event), terminates the application.
@@ -168,18 +170,20 @@ class MapEditor(object):
         gtk.main_quit()
         return False
 
-    # is invoked when the button is clicked.  It just prints a message.
-    def button_clicked(self, widget, data=None):
+    def box_clicked(self, widget, event, data=None):
         x = int(data[0])
         y = int(data[1])
-        print "painting tile %s, %s to %s" % (x, y,
-                                              self.selected_tile.image.name)
-        self.curmap.tiles[x][y] = copy(self.selected_tile)
-        i = gtk.Image()
-        i.set_from_file(self.selected_tile.image.get_path())
-        i.show()
-        self.buttongrid[x][y].set_image(i)
-        self.buttongrid[x][y].show()
+        if event.button == 3:
+            print "Erasing tile %s, %s" % (x, y)
+            self.curmap.tiles[x][y] = Tile()
+            
+        else:
+            print "painting tile %s, %s to %s" % (x, y,
+                                                self.selected_tile.image.name)
+            self.curmap.tiles[x][y] = copy(self.selected_tile)
+            
+        for child in self.boxgrid[x][y].get_children():
+            child.set_from_file(self.curmap.tiles[x][y].image.get_path())
 
     def __get_main_menu(self, window):
         accel_group = gtk.AccelGroup()
@@ -197,18 +201,49 @@ class MapEditor(object):
         # Finally, return the actual menu bar created by the item factory.
         return item_factory.get_widget("<main>")
 
+    def refresh_images(self):
+        for x in range(0,11):
+            for y in range(0,11):
+                for child in self.boxgrid[x][y].get_children():
+                    child.set_from_file(
+                        self.curmap.tiles[x][y].image.get_path())
+                    
     def __do_save_as(self, widget, data=None):
-        fcd = gtk.FileChooserDialog()
-        fcd.run()
+        fcd = gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                    buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,
+                             gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+        response = fcd.run()
+        if response == gtk.RESPONSE_OK:
+            filename = fcd.get_filename()
+            print "writing map file: %s" % (filename)
+            self.curmap.write_to_file(filename)
+            fcd.destroy()
+        else:
+            fcd.destroy()
+            
     def __do_new(self, widget, data=None):
-        pass
+        del self.curmap
+        self.curmap = Map()
+        self.refresh_images()
+        print "New map."
 
     def __do_save(self, widget, data=None):
         pass
     
     def __do_open(self, widget, data=None):
-        fcd = gtk.FileChooserDialog()
-        fcd.run()
+        fcd = gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                    buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,
+                             gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+        response = fcd.run()
+        if response == gtk.RESPONSE_OK:
+            filename = fcd.get_filename()
+            print "reading map from file: %s" % (filename)
+            self.curmap.read_from_file(filename)
+            fcd.destroy()
+            self.refresh_images()
+        else:
+            fcd.destroy()
+
     def __do_map_opts(self, widget, data=None):
         pass
 
@@ -246,7 +281,7 @@ class MapEditor(object):
 
     def __build_tileselector(self, parent_widget):
         self.tilebox = []
-        buttons = []
+        boxes = []
         images = []
         scrollwindow = gtk.ScrolledWindow()
         parent_widget.add(scrollwindow)
@@ -264,19 +299,15 @@ class MapEditor(object):
             image = gtk.Image()
             image.set_from_file(newtile.image.get_path())
             image.show()
-            button = gtk.Button()
-            button.connect("clicked", self.__change_selected, count)
-            hbox.add(button)
-            button.add(image)
-            button.show()
+            box = gtk.EventBox()
+            box.connect("button_press_event", self.__change_selected, count)
+            hbox.add(box)
+            box.add(image)
+            box.show()
             self.tilebox.append(newtile)
-            buttons.append(button)
+            boxes.append(box)
             images.append(image)
-            print newtile.image.name
             
-        for tile in self.tilebox:
-            print tile.image.name
-        
 def main():
     gtk.main()
     return 0

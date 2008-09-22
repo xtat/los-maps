@@ -227,8 +227,14 @@ class MapEditor(object):
         self.refresh_images()
         print "New map."
 
+    def not_imp_dialog(self):
+        md = gtk.MessageDialog(message_format="Not imp.",
+                               buttons =(gtk.BUTTONS_OK))
+        md.run()
+        md.destroy()
+        
     def __do_save(self, widget, data=None):
-        pass
+        self.not_imp_dialog()                   
     
     def __do_open(self, widget, data=None):
         fcd = gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -245,12 +251,12 @@ class MapEditor(object):
             fcd.destroy()
 
     def __do_map_opts(self, widget, data=None):
-        pass
+        self.not_imp_dialog()                   
 
     def __do_about(self, widget, data=None):
-        pass
+        self.not_imp_dialog()                   
     def __do_add_tile(self, widget, data=None):
-        pass
+        self.not_imp_dialog()                   
     
     def __build_menubar(self, parent_widget):
         self.menu_items = (

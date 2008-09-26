@@ -1,0 +1,12 @@
+Critical:
+ * Tile properties editor
+ * Save vs Save As functionality
+ * Map properties editor
+ * Figure out how to make dragging work
+ * About dialog
+
+Wishlist:
+ * Undo
+ * Some way to show that a tile is special (impassable, etc) visually 
+ * Ability to save tile palate
+ * Ability to delete tiles from palate

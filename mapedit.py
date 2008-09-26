@@ -5,19 +5,29 @@
 import pygtk
 pygtk.require('2.0')
 import gtk
+import os
 from struct import pack, unpack
 from copy import copy
 
-class Image(object):
+class Image(gtk.Image):
     name = "blank"
     def get_path(self):
         return "%s.jpg"% (self.name)
-
+        
+    def load(self):
+        self.set_from_file(self.get_path())
+        self.show()
+                        
 class Tile(object):
     special_function = 0
     special_param = ""
-    def __init__(self):
+    def __init__(self, imgname="blank"):
         self.image = Image()
+        self.image.name = imgname
+        self.eventbox = gtk.EventBox()
+        self.eventbox.add(self.image)
+        self.eventbox.show()
+        
     def __str__(self):
         return "%s%s%s%s\n" % (pack("B", len(self.image.name)),
                                self.image.name,
@@ -91,6 +101,10 @@ class Map(object):
                 idx += 1
                 row.append(tile)
             self.tiles.append(row)
+            
+def name_from_path(path):
+    "Given a pathname, return the LoS name for the image"
+    return os.path.splitext(path)[0]
     
 class MapEditor(object):        
     def __init__(self):
@@ -254,9 +268,22 @@ class MapEditor(object):
         self.not_imp_dialog()                   
 
     def __do_about(self, widget, data=None):
-        self.not_imp_dialog()                   
+        self.not_imp_dialog()
+        
     def __do_add_tile(self, widget, data=None):
-        self.not_imp_dialog()                   
+        fcd = gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                    buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,
+                             gtk.STOCK_OPEN,gtk.RESPONSE_OK))
+        response = fcd.run()
+        if response == gtk.RESPONSE_OK:
+            filename = fcd.get_filename()
+            print "reading image from file: %s" % (filename)
+            self.__add_tile(name_from_path(filename))
+            fcd.destroy()
+            #self.refresh_images()
+        else:
+            fcd.destroy()
+        
     
     def __build_menubar(self, parent_widget):
         self.menu_items = (
@@ -285,34 +312,35 @@ class MapEditor(object):
         main_vbox.pack_start(menubar, False, True, 0)
         menubar.show()
 
+    def __add_tile(self, imgname="blank"):
+        newtile = Tile(imgname=imgname)
+        newtile.image.load()
+        newtile.eventbox.connect("button_press_event",
+                                 self.__change_selected, self.tileboxcount)
+            
+        self.tilehbox.add(newtile.eventbox)
+        newtile.eventbox.show()
+        self.tilebox.append(newtile)
+        self.tileboxcount += 1
+        
+        
     def __build_tileselector(self, parent_widget):
         self.tilebox = []
-        boxes = []
-        images = []
+        self.tileboxcount = 0
+
+        # Create scolled box for selectable tiles
         scrollwindow = gtk.ScrolledWindow()
         parent_widget.add(scrollwindow)
         scrollwindow.show()
-        hbox = gtk.HBox()
-        scrollwindow.add_with_viewport(hbox)
-        hbox.show()
+        # Put hbox in scrolled window
+        self.tilehbox = gtk.HBox()
+        scrollwindow.add_with_viewport(self.tilehbox)
+        self.tilehbox.show()
         
         # add some dummy tiles to selector box
-        names = ['black', 'blank', 'greenz', 'stone', 'water', 'wood']
-        
-        for count in range (0,len(names)):
-            newtile = Tile()
-            newtile.image.name = names[count]
-            image = gtk.Image()
-            image.set_from_file(newtile.image.get_path())
-            image.show()
-            box = gtk.EventBox()
-            box.connect("button_press_event", self.__change_selected, count)
-            hbox.add(box)
-            box.add(image)
-            box.show()
-            self.tilebox.append(newtile)
-            boxes.append(box)
-            images.append(image)
+        for name in ['black', 'blank', 'greenz', 'stone', 'water', 'wood']:
+            self.__add_tile(imgname=name)
+            
             
 def main():
     gtk.main()

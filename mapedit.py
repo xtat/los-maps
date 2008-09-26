@@ -108,7 +108,11 @@ def name_from_path(path):
     
 class MapEditor(object):        
     def __init__(self):
+        #Path of current working file
+        self.curfilepath = None
+        #Current map object
         self.curmap = Map()
+        #Currently selected tile
         self.selected_tile = Tile()
         
         # create the main window, and attach delete_event
@@ -231,6 +235,7 @@ class MapEditor(object):
             filename = fcd.get_filename()
             print "writing map file: %s" % (filename)
             self.curmap.write_to_file(filename)
+            self.curfilepath = filename
             fcd.destroy()
         else:
             fcd.destroy()
@@ -240,6 +245,7 @@ class MapEditor(object):
         self.curmap = Map()
         self.refresh_images()
         print "New map."
+        self.curfilepath = None
 
     def not_imp_dialog(self):
         md = gtk.MessageDialog(message_format="Not imp.",
@@ -248,7 +254,11 @@ class MapEditor(object):
         md.destroy()
         
     def __do_save(self, widget, data=None):
-        self.not_imp_dialog()                   
+        if self.curfilepath:
+            print "writing map file: %s" % (self.curfilepath)
+            self.curmap.write_to_file(self.curfilepath)
+        else:
+            self.__do_save_as(None)
     
     def __do_open(self, widget, data=None):
         fcd = gtk.FileChooserDialog(action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -259,6 +269,7 @@ class MapEditor(object):
             filename = fcd.get_filename()
             print "reading map from file: %s" % (filename)
             self.curmap.read_from_file(filename)
+            self.curfilepath = filename
             fcd.destroy()
             self.refresh_images()
         else:
